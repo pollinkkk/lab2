@@ -1,15 +1,62 @@
 import logging
 from collections.abc import Iterator
-from csv import DictReader
 from datetime import datetime
-from json import JSONDecodeError, loads
 
 from .constants import FIELDS, LEVELS
-from .errors import IncorrectEventError, InvalidTimestampError
+from .errors import IncorrectEventError, InvalidTimestampError, UnsupportedFormatError
 from .models import Event
 
 # создание персонального логгера
 logger = logging.getLogger(__name__)
+
+def read_csv(file_name: str) -> Iterator[dict[str,str]]:
+    """Чтение csv файла."""
+    with open(file_name, encoding="utf-8") as file:
+        fields = file.readline().strip().split(',')
+        if len(fields)!=4: 
+            raise IncorrectEventError("Некорректная csv-строка.")
+
+        while ((line:= file.readline()) != ""):
+            values_event = line.strip().split(',', maxsplit=3)
+            if len(values_event)!=4 or fields[3]=="": 
+                raise IncorrectEventError("Некорректная csv-строка.")
+            event_dict ={
+                fields[0]: values_event[0],
+                fields[1]: values_event[1],
+                fields[2]: values_event[2],
+                fields[3]: values_event[3],
+            }
+            yield event_dict
+
+def read_jsonl(file_name: str) -> Iterator[dict[str, str]]:
+    """Чтение jsonl файла."""
+    with open(file_name, encoding="utf-8") as file:
+
+        while ((line:= file.readline()) != ""):
+            clean_line = line.strip()
+
+            if clean_line == "" or clean_line[0] != '{' or clean_line[-1] != '}':
+                raise IncorrectEventError("Некорректная jsonl-строка")
+
+            split_line = clean_line[1:-1].split(',', maxsplit=3) # убираем { и } в начале и конце и сплитуем по ,
+
+            if len(split_line)!=4 : 
+                raise IncorrectEventError("Некорректная jsonl-строка.")
+
+            event_dict = {}
+
+            for row in split_line:
+                field = row.split(':',maxsplit=1)
+
+                if len(field) != 2:
+                    raise IncorrectEventError('Некорретно введено событие.')
+
+                key = field[0].strip().strip('"')
+                value = field[1].strip().strip('"')
+
+                event_dict[key] = value
+
+            yield event_dict
 
 def validate_event(dict_line: dict[str, str]) -> Event:
     """Проверка корректности события."""
@@ -47,59 +94,60 @@ def parse_csv(file_name: str, skip_invalid: bool) -> Iterator[Event | None]:
     """Парсинг файла формата CSV."""
 
     try:
-        with open(f'{file_name}', encoding="utf-8") as file:
-            file_dicts = DictReader(file)
+        file_dicts = read_csv(file_name)
 
-            # проход по строкам и их подсчет
-            for line_number, line in enumerate(file_dicts, start=2):
-                try:
-                    event = validate_event(line)
-                    yield event
-                except (IncorrectEventError, InvalidTimestampError):
+        # проход по строкам и их подсчет
+        for line_number, line in enumerate(file_dicts, start=2):
+            try:
+                event = validate_event(line)
+                yield event
+            except (IncorrectEventError, InvalidTimestampError):
 
-                    # ловим ошибку, если skip_invalid = True, то пропускаем строку
-                    # если skip_invalid = False, то вызываем ошибку
-                    if skip_invalid:
-                        logger.warning(f'В файле {file.name} пропущена некорректная строка №{line_number}.')  
-                        yield None
-                        continue
-                    else: 
-                        raise
+                # ловим ошибку, если skip_invalid = True, то пропускаем строку
+                # если skip_invalid = False, то вызываем ошибку
+                if skip_invalid:
+                    logger.warning(f'В файле {file_name} пропущена некорректная строка №{line_number}.')  
+                    yield None
+                    continue
+                else: 
+                    raise
     except FileNotFoundError:  
         raise FileNotFoundError("Не удалось открыть файл.")
+
+    except UnsupportedFormatError:
+        raise UnsupportedFormatError('Неверные поля файла.')
+
+    except IncorrectEventError:
+        raise UnsupportedFormatError('Некорректная csv-строка.')
 
 def parse_jsonl(file_name: str, skip_invalid: bool) -> Iterator[Event | None]:
     """Парсинг файла формата JSONL."""
 
     try:
-        with open(f'{file_name}', encoding="utf-8") as file:
+        file_dicts = read_jsonl(file_name)
 
-            # проход по строкам и их подсчет
-            for line_number, line in enumerate(file, start=1):
-                try:
-                    line_dict = loads(line)
-                    event = validate_event(line_dict)
-                except JSONDecodeError:
+        # проход по строкам и их подсчет
+        for line_number, line in enumerate(file_dicts, start=1):
+            try:
+                event = validate_event(line)
 
-                    # ловим ошибку, если skip_invalid = True, то пропускаем строку
-                    # если skip_invalid = False, то вызываем ошибку
-                    if skip_invalid:
-                        logger.warning(f'В файле {file.name} пропущена некорректная строка №{line_number}.')  
-                        yield None
-                        continue
-                    else: 
-                        raise IncorrectEventError('Некорректная jsonl-строка')
-                except (IncorrectEventError, InvalidTimestampError):
+            except (IncorrectEventError, InvalidTimestampError):
 
-                    # ловим ошибку, если skip_invalid = True, то пропускаем строку
-                    # если skip_invalid = False, то вызываем ошибку
-                    if skip_invalid:
-                        logger.warning(f'В файле {file.name} пропущена некорректная строка №{line_number}.')  
-                        yield None
-                        continue
-                    else: 
-                        raise
+                # ловим ошибку, если skip_invalid = True, то пропускаем строку
+                # если skip_invalid = False, то вызываем ошибку
+                if skip_invalid:
+                    logger.warning(f'В файле {file_name} пропущена некорректная строка №{line_number}.')  
+                    yield None
+                    continue
+                else: 
+                    raise
 
-                yield event
+            yield event
     except FileNotFoundError:  
         raise FileNotFoundError("Не удалось открыть файл.")
+
+    except UnsupportedFormatError:
+        raise UnsupportedFormatError('Неверные поля файла.')
+
+    except IncorrectEventError:
+            raise UnsupportedFormatError('Некорректная csv-строка.')
