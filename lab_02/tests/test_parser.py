@@ -213,8 +213,14 @@ def test_invalid_level(tmp_path: Path) -> None:
         str(output_file),
     ],
     check=False, 
+    capture_output=True,
+    text=True
     )
     assert res.returncode == 2 
+    # проверяем что есть предупреждение с названием
+    #  файла и номером строки
+    assert "events.csv" in res.stderr
+    assert "строка №3" in res.stderr
     
 def test_unit_invalid_time(tmp_path: Path) -> None:
     """Unit-тест parse_jsonl с некорректным временем."""
@@ -228,10 +234,12 @@ def test_unit_invalid_time(tmp_path: Path) -> None:
         encoding="utf-8"
     )
 
-    with pytest.raises(InvalidTimestampError):
-        list(parse_jsonl(str(file), False))
+    with pytest.raises(InvalidTimestampError) as error:
+        list(parse_jsonl(str(file), False)) 
 
    
+    assert "строка №3" in str(error.value)
+    assert "timestamp" in str(error.value)
 
 def test_bad_jsonl_not_skip(tmp_path: Path) -> None:
     """Тест на некорректном файле jsonl без пропуска ошибок."""
@@ -257,8 +265,13 @@ def test_bad_jsonl_not_skip(tmp_path: Path) -> None:
         str(output_file),
     ],
     check=False, 
+    capture_output=True,
+    text=True,
     )
     assert res.returncode == 2 
+
+    assert "events.jsonl" in res.stderr
+    assert "строка №2" in res.stderr
     
 def test_bad_jsonl_with_skip(tmp_path: Path) -> None:
     """Тест на некорректном файле jsonl с пропуском ошибок."""
@@ -321,7 +334,7 @@ def test_empty_csv(tmp_path: Path) -> None:
     output_file = tmp_path / "report.json" 
 
     input_file.write_text(
-        "timestamp,level,source,message\n" ,
+        "" ,
         encoding="utf-8"
     )
 
@@ -575,3 +588,101 @@ def test_help() -> None:
     assert "--output OUTPUT" in res.stdout
     assert "--skip-invalid" in res.stdout
 
+def test_same_statistics(tmp_path: Path) -> None:
+    """Тест для проверки статистики из двух файлов csv и jsonl."""
+
+    input_file_1 = tmp_path/ "events_1.csv"
+    input_file_2 = tmp_path/ "events_2.jsonl"
+    output_file_1 = tmp_path/ "report_1.json"
+    output_file_2 = tmp_path/ "report_2.json"
+
+    input_file_1.write_text(
+        "timestamp,level,source,message\n"
+        "2026-10-09T22:51:00,WARNING,app1,предупреждение\n"
+        "2026-10-09T22:52:00,CRITICAL,app2,сломалось\n"
+        "2026-10-09T22:53:00,INFO,app3,работает\n",
+        encoding="utf-8",
+    )
+
+    input_file_2.write_text(
+        '{"timestamp":"2026-10-09T22:51:00","level":"WARNING","source":"app1","message":"предупреждение"}\n'
+        '{"timestamp":"2026-10-09T22:52:00","level":"CRITICAL","source":"app2","message":"сломалось"}\n'
+        '{"timestamp":"2026-10-09T22:53:00","level":"INFO","source":"app3","message":"работает"}\n',
+        encoding="utf-8",
+    )
+
+    res_1 = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "streamstats",
+            "analyze",
+            str(input_file_1),
+            "--format",
+            "csv",
+            "--output",
+            str(output_file_1)
+        ],
+        check=False
+    )
+
+    res_2 = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "streamstats",
+            "analyze",
+            str(input_file_2),
+            "--format",
+            "jsonl",
+            "--output",
+            str(output_file_2)
+        ],
+        check=False
+    )
+
+    assert res_1.returncode == 0
+    assert res_2.returncode == 0
+
+    with open(output_file_1, encoding="utf-8") as file: 
+        rez_1 = json.load(file) 
+
+    with open(output_file_2, encoding="utf-8") as file: 
+        rez_2 = json.load(file) 
+
+    assert rez_1 == rez_2
+
+def test_immutability_input_file(tmp_path: Path) -> None:
+    """Тест на проверку неизменности входного файла."""
+
+    input_file = tmp_path/ "events_.csv"
+    output_file = tmp_path/ "report.json"
+
+    text = (
+            "timestamp,level,source,message\n"
+            "2026-10-09T22:57:00,INFO,app,start\n"
+        )
+    
+    input_file.write_text(
+        text,
+        encoding="utf-8",
+
+    )
+
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "streamstats",
+            "analyze",
+            str(input_file),
+            "--format",
+            "csv",
+            "--output",
+            str(output_file)
+        ],
+        check=False,
+    )
+    assert res.returncode == 0
+    # проверяем исходный текст и текст в файле после запуска программы
+    assert input_file.read_text(encoding="utf-8") == text

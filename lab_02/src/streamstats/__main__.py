@@ -8,7 +8,8 @@ from .analysis import (
     element_processing,
     get_top_5,
 )
-from .errors import InvalidTimestampError, StreamStatsError
+from .constants import LEVELS
+from .errors import ConfigurationCLIError, InvalidTimestampError, StreamStatsError
 from .filters import filter_levels, filter_sources, filter_time
 from .parsers import parse_csv, parse_jsonl
 from .report import statis_to_dict, write_to_csv_file, write_to_json_file
@@ -37,7 +38,8 @@ def main() -> None:
         parser.add_argument("--flag", action="store_true")
 
         args = parser.parse_args()
-
+        if args.level is not None and args.level not in LEVELS:
+            raise ConfigurationCLIError("Некорректное значение аргумента --level.")
         if args.command == "analyze":
             statis = create_statistics()
 

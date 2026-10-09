@@ -8,6 +8,7 @@ class Statistics:
     """Класс для отображения статистики."""
     
     def __init__(self) -> None:
+        """Инициализация класса Statistics."""
         self.count_events = 0
         self.levels = {
             'DEBUG': 0,
@@ -84,7 +85,7 @@ def get_top_5(
     """Получение top-5 источников ошибок уровня ERROR/CRITICAL."""
 
     error_sources = statis.error_source
-    sort_error_sources = sorted(error_sources.items(), key=lambda x: x[1], reverse=True)
+    sort_error_sources = sorted(error_sources.items(), key=lambda x: (-x[1], x[0]))
     top_5 = sort_error_sources[:5]
 
     return top_5
