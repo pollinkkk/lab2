@@ -97,7 +97,7 @@ def test_filter_level(tmp_path: Path) -> None:
             'baze': 1,
             'api': 1,
         }
-    assert rez["top_5_error_sources"] == [['baze', 1], ['api', 1]]
+    assert rez["top_5_error_sources"] == [['api', 1], ['baze', 1]]
     assert rez["first_timestamp"] == "2026-10-07 10:58:00"
     assert rez["last_timestamp"] == "2026-10-07 11:00:00"
     assert rez["count_skip"] == 0
