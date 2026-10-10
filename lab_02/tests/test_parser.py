@@ -280,8 +280,13 @@ def test_bad_jsonl_with_skip(tmp_path: Path) -> None:
     output_file = tmp_path / "report.json" 
 
     input_file.write_text(
-            '{"timestamp":"2026-10-06T19:32:00","level":"INFO","source":"app","message":"ok"}\n'
-            '{"timestamp":"2026-10-06T19:33:00","level":"ERROR","source":"baze","message":"ops"\n',# сломаный json - нет закрывающей скобки
+            '{"timestamp":"2026-10-06T19:32:00","level":"INFO","source":"app1","message":"ok"}\n'
+            '{"timestamp":"2026-10-06T19:33:00","level":"DEBUG","source":"api","message":"restart"}\n'
+            '{"timestamp":"2026-10-06T19:34:00","level":"INFO","source":"app2","message":"ok"}\n'
+            '{"timestamp":"2026-10-06T19:35:00","level":"WARNING","source":"api","message":"stop"}\n'
+            '{"timestamp":"2026-10-06T19:36:00","level":"CRITICAL","source":"baze","message":"error"}\n'
+            '{"timestamp":"2026-10-06T19:38:00","level":"DEBUG","source":"app1","message":"restart"}\n'
+            '{"timestamp":"2026-10-06T19:39:00","level":"ERROR","source":"baze","message":"broke"\n',# сломаный json - нет закрывающей скобки
             encoding="utf-8",
         )
 
@@ -305,25 +310,28 @@ def test_bad_jsonl_with_skip(tmp_path: Path) -> None:
     )
     assert res.returncode == 0 
     assert "events.jsonl" in res.stderr
-    assert "строка №2" in res.stderr
+    assert "строка №7" in res.stderr
     
     with open(output_file, encoding="utf-8") as file: 
         rez = json.load(file) 
     
-    assert rez["count_events"] == 1
+    assert rez["count_events"] == 6
     assert rez["levels"] == {
-            'DEBUG': 0,
-            'INFO': 1,
-            'WARNING': 0,
+            'DEBUG': 2,
+            'INFO': 2,
+            'WARNING': 1,
             'ERROR': 0,
-            'CRITICAL': 0
+            'CRITICAL': 1
         } 
     assert rez["sources"] == {
-            'app': 1,
+            'app1': 2,
+            'api': 2,
+            'app2': 1,
+            'baze': 1,
         }
-    assert rez["top_5_error_sources"] == []
+    assert rez["top_5_error_sources"] == [['baze', 1]]
     assert rez["first_timestamp"] == "2026-10-06 19:32:00"
-    assert rez["last_timestamp"] == "2026-10-06 19:32:00"
+    assert rez["last_timestamp"] == "2026-10-06 19:38:00"
     assert rez["count_skip"] == 1
 
 
@@ -565,6 +573,56 @@ def test_two_files(tmp_path: Path) -> None:
     assert rez["top_5_error_sources"] == [['app2', 2]]
     assert rez["first_timestamp"] == "2026-10-06 23:06:00"
     assert rez["last_timestamp"] == "2026-10-06 23:15:00"
+    assert rez["count_skip"] == 0
+
+def test_sort_top_5(tmp_path: Path) -> None:
+    """Тест на сортировку top_5_sources."""
+
+    input_file = tmp_path/ "events.jsonl" 
+    output_file = tmp_path / "report.json" 
+
+    input_file.write_text(
+        '{"timestamp":"2026-10-06T22:30:00","level":"CRITICAL","source":"приложение","message":"не работает"}\n'
+        '{"timestamp":"2026-10-06T22:31:00","level":"ERROR","source":"приложение","message":"приложение упало"}\n'
+        '{"timestamp":"2026-10-06T22:32:00","level":"CRITICAL","source":"база","message":"не работает"}\n'
+        '{"timestamp":"2026-10-06T22:33:00","level":"ERROR","source":"база","message":"база не отвечает"}\n',
+        encoding="utf-8",
+    )
+
+    res = subprocess.run( 
+    [
+        sys.executable,
+        "-m",
+        "streamstats",
+        "analyze",
+        str(input_file),
+        "--format",
+        "jsonl",
+        "--output",
+        str(output_file),
+    ],
+    check=False, 
+    )
+    assert res.returncode == 0 
+    
+    with open(output_file, encoding="utf-8") as file: 
+        rez = json.load(file) 
+  
+    assert rez["count_events"] == 4
+    assert rez["levels"] == {
+            'DEBUG': 0,
+            'INFO': 0,
+            'WARNING': 0,
+            'ERROR': 2,
+            'CRITICAL': 2
+        } 
+    assert rez["sources"] == {
+            'приложение': 2,
+            'база': 2,
+        }
+    assert rez["top_5_error_sources"] == [['база', 2], ['приложение', 2]]
+    assert rez["first_timestamp"] == "2026-10-06 22:30:00"
+    assert rez["last_timestamp"] == "2026-10-06 22:33:00"
     assert rez["count_skip"] == 0
 
 def test_help() -> None:
