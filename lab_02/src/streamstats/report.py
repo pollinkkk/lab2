@@ -28,7 +28,7 @@ def write_to_json_file(statis: dict[str, int | str | dict | list[tuple[str, int]
 def write_to_csv_file(statis: dict[str, int | str | dict | list[tuple[str, int]] | None] , output_file: str) -> None:
     """Запись статистики в csv файл (доп)."""
     
-    with open(output_file, "w", encoding="utf-8") as file:
+    with open(output_file, "w", encoding="utf-8", newline="") as file:
         csv_writer = writer(file)
 
         # записать строку с заголовками

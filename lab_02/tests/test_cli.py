@@ -128,7 +128,7 @@ def test_bad_csv_not_skip(tmp_path: Path) -> None:
     ],
     check=False, 
     )
-    assert res.returncode == 2 
+    assert res.returncode == 2 # программа завершается с ошибкой
 
 def test_bad_csv_with_skip(tmp_path: Path) -> None:
     """Тест на некорректном файле csv с пропуском ошибок."""
@@ -212,6 +212,7 @@ def test_invalid_level(tmp_path: Path) -> None:
     text=True
     )
     assert res.returncode == 2 
+
     # проверяем что есть предупреждение с названием
     #  файла и номером строки
     assert "events.csv" in res.stderr
@@ -322,7 +323,7 @@ def test_empty_csv(tmp_path: Path) -> None:
         encoding="utf-8"
     )
 
-    res = subprocess.run(  # запускаем программу
+    res = subprocess.run(  
     [
         sys.executable,
         "-m",

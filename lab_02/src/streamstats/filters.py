@@ -7,6 +7,7 @@ from .models import Event
 def filter_levels(filter_level: str, events: Iterator[Event]) -> Iterator[Event]:
     """Фильтр по уровням."""
 
+    # проходимся по событиям, если параметр поля удовлетворяет фильтру - передаем событие
     for event in events:
         if event.level == filter_level:
             yield event
@@ -14,6 +15,7 @@ def filter_levels(filter_level: str, events: Iterator[Event]) -> Iterator[Event]
 def filter_sources(filter_source: str, events: Iterator[Event]) -> Iterator[Event]:
     """Фильтр по источникам."""
 
+    # проходимся по событиям, если параметр поля удовлетворяет фильтру - передаем событие
     for event in events:
         if event.source == filter_source:
             yield event

@@ -17,8 +17,9 @@ def validate_event(dict_line: dict[str, str]) -> Event:
     # проверка наличия всех полей
     for pole in FIELDS:
         if pole not in dict_line:
-            raise IncorrectEventError('Не все обязательные поля присутствуют.')
+            raise UnsupportedFormatError('Не все обязательные поля присутствуют.')
 
+    # сохраняем названия полей
     timestamp = dict_line[FIELDS[0]]
     level = dict_line[FIELDS[1]]
     source = dict_line[FIELDS[2]]
@@ -57,13 +58,6 @@ def parse_csv(file_name: str, skip_invalid: bool) -> Iterator[Event | None]:
             # проверяем что поля не пусты, иначе - файл пуст
             if file_dicts.fieldnames is None:
                 return
-
-            # проверяем наличие обязательных полей
-            for field in FIELDS:
-                if field not in file_dicts.fieldnames:
-                    raise UnsupportedFormatError(
-                        'Неверные поля csv-файла.'
-                    )
             
             # проход по строкам и их подсчет
             for line_number, line in enumerate(file_dicts, start=2):
@@ -72,6 +66,9 @@ def parse_csv(file_name: str, skip_invalid: bool) -> Iterator[Event | None]:
                     event = validate_event(line)
                     yield event
 
+                # ловим ошибку при валидации
+                # если skip_invalid == True, тогда пропускаем строку и выводим информацию об этом
+                # иначе вызываем ошибку и также указываем информацию о ней
                 except IncorrectEventError as error:
                     if skip_invalid:
                         logger.warning(
@@ -90,6 +87,7 @@ def parse_csv(file_name: str, skip_invalid: bool) -> Iterator[Event | None]:
                         raise InvalidTimestampError(
                             f'В файле {file_name} строка №{line_number}, поле timestamp: {error}') from error
 
+    # не удалось открыть файл - ошибка
     except FileNotFoundError:
         raise FileNotFoundError("Не удалось открыть файл.")
 

@@ -76,7 +76,7 @@ def test_filter_level(tmp_path: Path) -> None:
         "--output",
         str(output_file),
         "--level",
-        "ERROR"
+        "ERROR" # вводим фильтр
     ],
     check=False, 
     )
@@ -130,7 +130,7 @@ def test_filter_source(tmp_path: Path) -> None:
         "--output",
         str(output_file),
         "--source",
-        "app1"
+        "app1"   # ввод фильтра
     ],
     check=False, 
     )
@@ -183,8 +183,8 @@ def test_filter_time(tmp_path: Path) -> None:
         "--output",
         str(output_file),
         "--time",
-        "2026-10-07T10:59:00",
-        "--flag"
+        "2026-10-07T10:59:00", # ввод фильтра
+        "--flag"  # флаг фильтра по времени
     ],
     check=False, 
     )

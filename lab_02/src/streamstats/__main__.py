@@ -38,13 +38,18 @@ def main() -> None:
         parser.add_argument("--flag", action="store_true")
 
         args = parser.parse_args()
+
+        # проверяем корректность ввода для фильтра level
         if args.level is not None and args.level not in LEVELS:
             raise ConfigurationCLIError("Некорректное значение аргумента --level.")
+        
         if args.command == "analyze":
             statis = create_statistics()
 
             # перебираем файлы с ввода
             for file in args.INPUT:
+
+                # парсим файл
                 if args.format == 'csv':
                     events = parse_csv(file, args.skip_invalid)
                 else:
@@ -75,6 +80,7 @@ def main() -> None:
                         )
 
                 # проходимся по полученному итератору событий
+                # собираем статистику
                 for element in clean_events:
                     element_processing(element, statis)
 
@@ -91,6 +97,7 @@ def main() -> None:
         if args.format_output == 'json':
             write_to_json_file(dict_statis, args.output)
 
+    # обработка ошибок
     except StreamStatsError as error:
         print(error, file=sys.stderr)
         sys.exit(2)

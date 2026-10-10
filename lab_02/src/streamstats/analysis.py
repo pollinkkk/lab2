@@ -32,8 +32,11 @@ def cleaning_iterator(events: Iterator[Event | None], statis: Statistics) -> Ite
     """Очистка потока от None."""
 
     for element in events:
+
+        # ловим None - обновляем статистику и все
         if element == None:
             statis.count_skip += 1
+        # иначе возвращаем событие
         else:
             yield element
 
@@ -84,8 +87,11 @@ def get_top_5(
     ) -> list[tuple[str, int]]:
     """Получение top-5 источников ошибок уровня ERROR/CRITICAL."""
 
+    # берем все источники с ошибками
     error_sources = statis.error_source
+    # сортируем по количеству (по убыванию), а потом по алфавиту 
     sort_error_sources = sorted(error_sources.items(), key=lambda x: (-x[1], x[0]))
+    # берем срез первых пяти
     top_5 = sort_error_sources[:5]
 
     return top_5

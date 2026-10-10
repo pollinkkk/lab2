@@ -3,7 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from streamstats.analysis import Statistics, create_statistics, element_processing
+from streamstats.analysis import (
+    Statistics,
+    create_statistics,
+    element_processing,
+    get_top_5,
+)
 from streamstats.errors import InvalidTimestampError
 from streamstats.models import Event
 from streamstats.parsers import parse_csv, parse_jsonl
@@ -150,3 +155,23 @@ def test_unit_report() -> None:
     assert stat_dict['first_timestamp'] == '2026-10-10 16:53:00'
     assert stat_dict['last_timestamp'] == '2026-10-10 16:55:00'
     assert stat_dict['count_skip'] == 0
+
+def test_unit_sort_in_top_5() -> None:
+    """Unit-тест на проверку сортировки в top_5_errors."""
+
+    # создаем словарь источников с ошибкой
+    statis = Statistics()
+    statis.error_source = {
+        'baze': 1,
+        'app': 1,
+        'api': 2
+    }
+
+    #получаем список кортежей
+    rez = get_top_5(statis)
+
+    assert rez == [
+        ('api', 2),
+        ('app', 1),
+        ('baze', 1)
+    ]
