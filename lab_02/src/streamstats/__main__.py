@@ -59,13 +59,13 @@ def main() -> None:
                 clean_events = cleaning_iterator(events, statis)
 
                 # проверяем фильтры
-                if args.level != None:
+                if args.level is not None:
                     clean_events = filter_levels(args.level, clean_events)
 
-                if args.source != None:
+                if args.source is not None:
                     clean_events = filter_sources(args.source, clean_events)
 
-                if args.time != None:
+                if args.time is not None:
                     try:
                         iso_datetime = datetime.fromisoformat(args.time)
                     except ValueError as error:

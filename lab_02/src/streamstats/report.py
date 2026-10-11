@@ -12,8 +12,8 @@ def statis_to_dict(statis: Statistics, top_5: list[tuple[str, int]]) -> dict[str
         'levels': statis.levels,
         'sources': statis.sources,
         'top_5_error_sources': top_5,
-        'first_timestamp': str(statis.first_timestamp) if statis.first_timestamp != None else None,
-        'last_timestamp': str(statis.last_timestamp) if statis.last_timestamp != None else None,
+        'first_timestamp': str(statis.first_timestamp) if statis.first_timestamp is not None else None,
+        'last_timestamp': str(statis.last_timestamp) if statis.last_timestamp is not None else None,
         'count_skip': statis.count_skip
     }
 

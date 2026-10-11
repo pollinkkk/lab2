@@ -311,7 +311,129 @@ def test_bad_jsonl_with_skip(tmp_path: Path) -> None:
     assert rez["last_timestamp"] == "2026-10-06 19:38:00"
     assert rez["count_skip"] == 1
 
+def test_skipped_field_not_skip(tmp_path: Path) -> None:
+    """Тест parse_jsonl у события пропущено поле без пропуска строки."""
 
+    input_file = tmp_path/ "events.jsonl" 
+    output_file = tmp_path/ "report.json" 
+
+    input_file.write_text(
+        '{"timestamp":"2026-10-11T12:40:00","level":"INFO","source":"api","message":"start"}\n'
+        '{"timestamp":"2026-10-11T12:41:00","level":"DEBUG","message":"error"}\n'
+        '{"timestamp":"2026-10-11T12:42:00","level":"ERROR","source":"app3","message":"stop"}\n',
+        encoding="utf-8"
+    )
+    
+    res = subprocess.run( 
+        [
+            sys.executable,
+            "-m",
+            "streamstats",
+            "analyze",
+            str(input_file),
+            "--format",
+            "jsonl",
+            "--output",
+            str(output_file)
+            
+        ],
+        check=False, 
+        capture_output=True,
+        text=True,
+        )
+    assert res.returncode == 2 
+
+    assert "events.jsonl" in res.stderr
+    assert "строка №2" in res.stderr
+
+def test_skipped_field_with_skip(tmp_path: Path) -> None:
+    """Тест parse_jsonl у события пропущено поле с пропуском строки."""
+
+    input_file = tmp_path/ "events.jsonl" 
+    output_file = tmp_path/ "report.json" 
+
+    input_file.write_text(
+        '{"timestamp":"2026-10-11T12:43:00","level":"INFO","source":"api","message":"start"}\n'
+        '{"timestamp":"2026-10-11T12:44:00","level":"DEBUG","message":"error"}\n'
+        '{"timestamp":"2026-10-11T12:45:00","level":"ERROR","source":"app","message":"stop"}\n',
+        encoding="utf-8"
+    )
+    
+    res = subprocess.run( 
+        [
+            sys.executable,
+            "-m",
+            "streamstats",
+            "analyze",
+            str(input_file),
+            "--format",
+            "jsonl",
+            "--output",
+            str(output_file),
+            "--skip-invalid"
+            
+        ],
+        check=False, 
+        capture_output=True,
+        text=True,
+        )
+    
+    assert res.returncode == 0
+
+    assert "events.jsonl" in res.stderr
+    assert "строка №2" in res.stderr
+    
+    with open(output_file, encoding="utf-8") as file: 
+        rez = json.load(file) 
+    
+    assert rez["count_events"] == 2
+    assert rez["levels"] == {
+            'DEBUG': 0,
+            'INFO': 1,
+            'WARNING': 0,
+            'ERROR': 1,
+            'CRITICAL': 0
+        } 
+    assert rez["sources"] == {
+            'api': 1,
+            'app': 1
+        }
+    assert rez["top_5_error_sources"] == [['app', 1]]
+    assert rez["first_timestamp"] == "2026-10-11 12:43:00"
+    assert rez["last_timestamp"] == "2026-10-11 12:45:00"
+    assert rez["count_skip"] == 1
+
+def test_invalid_heading(tmp_path: Path) -> None:
+    """Тест с некорректным заголовком csv файла."""
+    input_file = tmp_path/ "events.csv" 
+    output_file = tmp_path / "report.json" 
+
+    input_file.write_text(
+        'timestamp,level,message\n',
+        encoding="utf-8",
+    )
+    res = subprocess.run( 
+    [
+        sys.executable,
+        "-m",
+        "streamstats",
+        "analyze",
+        str(input_file),
+        "--format",
+        "csv",
+        "--output",
+        str(output_file),
+    ],
+    check=False, 
+    capture_output=True,
+    text=True,
+    )
+    assert res.returncode == 2 
+
+    assert "events.csv" in res.stderr
+    assert "строка №1" in res.stderr
+    assert "source" in res.stderr
+    
 def test_empty_csv(tmp_path: Path) -> None:
     """Тест пустого файла."""
 
@@ -352,8 +474,8 @@ def test_empty_csv(tmp_path: Path) -> None:
         } 
     assert rez["sources"] == {}
     assert rez["top_5_error_sources"] == []
-    assert rez["first_timestamp"] == None
-    assert rez["last_timestamp"] == None
+    assert rez["first_timestamp"] is None
+    assert rez["last_timestamp"] is None
     assert rez["count_skip"] == 0
 
 def test_empty_jsonl(tmp_path: Path) -> None:
@@ -395,8 +517,8 @@ def test_empty_jsonl(tmp_path: Path) -> None:
         } 
     assert rez["sources"] == {}
     assert rez["top_5_error_sources"] == []
-    assert rez["first_timestamp"] == None
-    assert rez["last_timestamp"] == None
+    assert rez["first_timestamp"] is None
+    assert rez["last_timestamp"] is None
     assert rez["count_skip"] == 0
 
 def test_unicode(tmp_path: Path) -> None:

@@ -34,7 +34,7 @@ def cleaning_iterator(events: Iterator[Event | None], statis: Statistics) -> Ite
     for element in events:
 
         # ловим None - обновляем статистику и все
-        if element == None:
+        if element is None:
             statis.count_skip += 1
         # иначе возвращаем событие
         else:
@@ -72,10 +72,10 @@ def element_processing(
 
     # обновление временных меток
     current_timestamp = element.timestamp
-    if statis.first_timestamp == None:
+    if statis.first_timestamp is None:
         statis.first_timestamp = current_timestamp
 
-    if statis.last_timestamp == None:
+    if statis.last_timestamp is None:
         statis.last_timestamp = current_timestamp
 
     statis.first_timestamp = min(statis.first_timestamp, current_timestamp)

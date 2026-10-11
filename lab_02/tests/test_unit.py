@@ -50,9 +50,9 @@ def test_unit_parse_csv(tmp_path: Path) -> None:
     rez = list(parse_csv(str(file), True)) # отдельно вызываем функцию парсинга csv файла
 
     assert len(rez) == 3
-    assert rez[0] != None
-    assert rez[1] != None
-    assert rez[2] == None
+    assert rez[0] is not None
+    assert rez[1] is not None
+    assert rez[2] is None
     assert rez[0].level == "INFO"
     assert rez[0].source == "app1"
     assert rez[1].level == "ERROR"
@@ -73,9 +73,9 @@ def test_unit_parse_jsonl(tmp_path: Path) -> None:
     rez = list(parse_jsonl(str(file), True))
 
     assert len(rez) == 3
-    assert rez[0] != None
-    assert rez[1] != None
-    assert rez[2] == None
+    assert rez[0] is not None
+    assert rez[1] is not None
+    assert rez[2] is None
     assert rez[0].level == "INFO"
     assert rez[0].source == "app1"
     assert rez[1].level == "ERROR"

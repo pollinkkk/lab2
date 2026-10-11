@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 def validate_event(dict_line: dict[str, str]) -> Event:
     """Проверка корректности события."""
 
-    # проверка наличия всех полей
+    # проверка наличия обязательных полей
     for pole in FIELDS:
         if pole not in dict_line:
-            raise UnsupportedFormatError('Не все обязательные поля присутствуют.')
+            raise IncorrectEventError(f'Не все обязательные поля присутствуют: отсутствует {pole}.')
 
     # сохраняем названия полей
     timestamp = dict_line[FIELDS[0]]
@@ -58,7 +58,12 @@ def parse_csv(file_name: str, skip_invalid: bool) -> Iterator[Event | None]:
             # проверяем что поля не пусты, иначе - файл пуст
             if file_dicts.fieldnames is None:
                 return
-            
+
+            # проверка наличия обязательных полей в заголовке файла
+            for pole in FIELDS:
+                if pole not in file_dicts.fieldnames:
+                    raise UnsupportedFormatError(f'В файле {file_name} в заголовке (строка №1) отстутствует поле {pole}.')
+                    
             # проход по строкам и их подсчет
             for line_number, line in enumerate(file_dicts, start=2):
                
@@ -105,8 +110,8 @@ def parse_jsonl(file_name: str, skip_invalid: bool) -> Iterator[Event | None]:
                     # проверяем что преобразованная строка - словарь
                     if type(line_dict) != dict:
                         raise IncorrectEventError(
-                            'Событие должно быть объектом.'
-    )
+                            'Событие должно представлять собой словарь.'
+                    )
 
                     event = validate_event(line_dict)
                     yield event
